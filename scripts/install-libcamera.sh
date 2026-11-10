@@ -72,6 +72,8 @@ sudo dnf versionlock add $(rpm -qa --qf '%{NAME}\n' | grep -E '^libcamera|^pytho
 
 echo
 echo "Done. 'cam -l' should list both the back and front cameras."
+echo "Desktop apps see cameras through PipeWire, which still runs the old library:"
+echo "  systemctl --user restart wireplumber pipewire pipewire-pulse   (or log out and in)"
 echo "To move to a newer libcamera later:"
 echo "  sudo dnf versionlock delete 'libcamera*' && sudo dnf update 'libcamera*'"
 echo "  then re-run this script against the new SRPM."
