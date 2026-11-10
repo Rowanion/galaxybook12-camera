@@ -11,12 +11,10 @@ frequencies found in Samsung's official 26 MHz sensor tables.
 
 --- a/drivers/media/pci/intel/ipu-bridge.c
 +++ b/drivers/media/pci/intel/ipu-bridge.c
-@@ -97,6 +97,10 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
-	IPU_SENSOR_CONFIG("OVTI8856", 3, 180000000, 360000000, 720000000),
+@@ -99,2 +99,6 @@
+ 	IPU_SENSOR_CONFIG("OVTI8856", 3, 180000000, 360000000, 720000000),
 +	/* Sony IMX241 (Samsung Galaxy Book 12 front camera) */
 +	IPU_SENSOR_CONFIG("INT347F", 1, 360966667),
 +	/* Sony IMX258 (Samsung Galaxy Book 12) */
 +	IPU_SENSOR_CONFIG("SONY258A", 2, 650000000, 321750000),
  	/* Sony IMX471 */
- 	IPU_SENSOR_CONFIG("SONY471A", 1, 200000000),
- 	/* Toshiba T4KA3 */

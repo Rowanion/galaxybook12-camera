@@ -1,0 +1,90 @@
+#!/bin/bash
+# Build the Galaxy Book DKMS packages for every installed kernel that is still
+# missing them. Runs after the network is up (boot) and whenever kernel-devel
+# changes, because DKMS's own boot-time run happens before the network and
+# cannot fetch kernel source. Tells logged-in users when a reboot is needed.
+set -uo pipefail
+# DKMS package names of the Galaxy Book 12 driver repos (camera, audio, accel).
+NAMES=(galaxybook12-camera alc298-galaxybook st-accel-sam0201)
+CACHE=/var/cache/galaxybook-kernel-src
+RUNNING="$(uname -r)"
+
+notify() {   # notify "<title>" "<body>"  -> journal + every graphical session
+  echo "$1: $2"
+  local s t u uid tries=0
+  while [ $tries -lt 60 ]; do       # at boot nobody may be logged in yet
+    for s in $(loginctl list-sessions --no-legend | awk '{print $1}'); do
+      t=$(loginctl show-session "$s" -p Type --value 2>/dev/null)
+      [ "$t" = wayland ] || [ "$t" = x11 ] || continue
+      u=$(loginctl show-session "$s" -p Name --value); uid=$(id -u "$u") || continue
+      runuser -u "$u" -- env DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+        notify-send -u critical -a "Galaxy Book drivers" "$1" "$2" 2>/dev/null && tries=99
+    done
+    [ $tries -eq 99 ] && return
+    tries=$((tries + 1)); sleep 10
+  done
+}
+
+# A path-unit trigger fires in the middle of a dnf transaction: let it finish.
+for _ in $(seq 1 120); do
+  pgrep -x 'dnf|dnf5|rpm|dkms|kernel-install|dracut' >/dev/null || break
+  sleep 15
+done
+
+wait_for_net() {
+  for _ in $(seq 1 30); do
+    curl -sfI --connect-timeout 10 -o /dev/null https://cdn.kernel.org/ && return 0
+    sleep 20
+  done
+  return 1
+}
+
+built=(); failed=(); reboot_needed=0
+for d in /lib/modules/*/; do
+  k="$(basename "$d")"
+  [ -e "$d/vmlinuz" ] && [ -e "$d/build/Makefile" ] || continue   # not installed / no kernel-devel
+  ks="${k%%-*}"
+  for n in "${NAMES[@]}"; do
+    # registered version (only one is kept by the installers)
+    v="$(dkms status -m "$n" 2>/dev/null | sed -n "s|^$n/\([^,:]*\)[,:].*|\1|p" | sort -uV | tail -1)"
+    # capture first: "| grep -q" under pipefail fails randomly (SIGPIPE)
+    [ -n "$v" ] || continue                                          # package not installed
+    st="$(dkms status -m "$n" -v "$v" -k "$k" 2>/dev/null)"
+    [[ "$st" == *": installed"* ]] && continue
+    if [ ! -f "$CACHE/linux-$ks.tar.xz" ] && [ ! -d "$CACHE/linux-$ks" ]; then
+      wait_for_net || { failed+=("$n on $k (no network)"); continue; }
+    fi
+    echo "Building $n for $k"
+    if dkms install -m "$n" -v "$v" -k "$k"; then
+      built+=("$n@$k"); [ "$k" = "$RUNNING" ] && reboot_needed=1
+    else
+      failed+=("$n on $k")
+    fi
+  done
+done
+
+# Drop cached source for kernel versions that are no longer installed.
+for f in "$CACHE"/linux-*; do
+  [ -e "$f" ] || continue
+  v="$(basename "$f")"; v="${v#linux-}"; v="${v%.tar.xz}"
+  compgen -G "/lib/modules/$v-*/vmlinuz" >/dev/null || rm -rf "$f"
+done
+
+# When a kernel is removed, DKMS restores the stock copies of our modules into
+# its now-empty /lib/modules dir. Remove such leftovers (no vmlinuz, not
+# owned by any package).
+for d in /lib/modules/*/; do
+  [ -e "$d/vmlinuz" ] && continue
+  rpm -q "kernel-core-$(basename "$d")" >/dev/null 2>&1 && continue
+  rpm -qf "$d" >/dev/null 2>&1 && continue
+  echo "Removing leftover $d"; rm -rf "$d"
+done
+
+[ ${#built[@]} -gt 0 ] && echo "Built: ${built[*]}"
+if [ ${#failed[@]} -gt 0 ]; then
+  notify "Galaxy Book driver build FAILED" \
+    "${failed[*]}. That hardware will use the stock driver. Logs: /var/lib/dkms/<package>/<version>/build/make.log"
+  exit 1
+fi
+[ $reboot_needed -eq 1 ] && notify "Galaxy Book drivers updated" "Reboot once to activate them on kernel $RUNNING."
+exit 0

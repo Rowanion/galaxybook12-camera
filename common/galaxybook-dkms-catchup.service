@@ -1,0 +1,13 @@
+[Unit]
+Description=Build Galaxy Book DKMS drivers for kernels that are missing them
+After=network-online.target dkms.service
+Wants=network-online.target
+
+[Service]
+# exec, not oneshot: must not hold up boot/login while it waits for network
+Type=exec
+ExecStart=/usr/local/sbin/galaxybook-dkms-catchup
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

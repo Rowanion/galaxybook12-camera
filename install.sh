@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-shot installer for the Galaxy Book 10.6 camera stack:
+# One-shot installer for the Galaxy Book 12 (SM-W720) camera stack:
 #   1. kernel modules via DKMS (rear + front sensors, autofocus)  -> survives kernel updates
 #   2. patched libcamera (front-camera IMX241 sensor helper)      -> versionlocked
 #   3. PipeWire libcamera plugin (so desktop apps see the cameras)

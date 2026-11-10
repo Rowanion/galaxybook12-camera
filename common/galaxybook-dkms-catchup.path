@@ -1,0 +1,9 @@
+[Unit]
+Description=Rebuild Galaxy Book DKMS drivers when kernel-devel changes
+
+[Path]
+PathChanged=/usr/src/kernels
+Unit=galaxybook-dkms-catchup.service
+
+[Install]
+WantedBy=paths.target

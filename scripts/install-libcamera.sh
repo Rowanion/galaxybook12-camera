@@ -39,7 +39,7 @@ fi
 sed -i -E 's/^Release:[[:space:]]*([0-9]+)%\{\?dist\}$/Release: \1%{?dist}.gb12cam/' "$SPEC"
 CL=$(LC_ALL=C date +'%a %b %d %Y')
 grep -q 'IMX241 libipa sensor helper' "$SPEC" || \
-  sed -i "/^%changelog$/a * $CL galaxybook-10.6-camera - add IMX241 libipa sensor helper (patch 0004)\n" "$SPEC"
+  sed -i "/^%changelog$/a * $CL galaxybook12-camera - add IMX241 libipa sensor helper (patch 0004)\n" "$SPEC"
 
 echo "== verify patch applies, then build (skip test suite) =="
 rpmbuild -bp "$SPEC"
