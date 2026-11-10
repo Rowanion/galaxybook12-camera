@@ -21,6 +21,12 @@ This repo
 packages them for Fedora: the kernel side as a **DKMS** module so it survives
 kernel updates, and the userspace side as a **rebuilt libcamera RPM**.
 
+> **Fedora only.** Tested on Fedora 44 only. The kernel patches and DKMS build should work on
+> other distributions, but the install scripts are written for Fedora (`dnf`/`rpm`,
+> `kernel-devel`, kernels found via `/lib/modules/<version>/vmlinuz`; the
+> libcamera step rebuilds Fedora's RPM).
+> On other distributions they are untested and will likely fail.
+
 ## Layout
 ```
 install.sh  one-shot: kernel DKMS + patched libcamera + PipeWire plugin
