@@ -19,9 +19,12 @@ sudo dnf builddep -y libcamera
 rpmdev-setuptree
 
 echo "== fetch + unpack the source RPM =="
-cd ~
-dnf download --source libcamera || sudo dnf download --source libcamera --enablerepo='*-source'
-rpm -Uvh --force ~/libcamera-*.src.rpm
+# download into an empty dir, so exactly this release's SRPM is unpacked
+SRPMDIR="$(mktemp -d)"; trap 'rm -rf "$SRPMDIR"' EXIT
+( cd "$SRPMDIR" && { dnf download --source libcamera || dnf download --source libcamera --enablerepo='*-source'; } )
+SRPM=("$SRPMDIR"/libcamera-*.src.rpm)
+[ ${#SRPM[@]} -eq 1 ] && [ -f "${SRPM[0]}" ] || { echo "ERROR: expected one libcamera SRPM, got: ${SRPM[*]}" >&2; exit 1; }
+rpm -Uvh --force "${SRPM[0]}"
 cp "$PATCH_SRC" ~/rpmbuild/SOURCES/
 
 SPEC=~/rpmbuild/SPECS/libcamera.spec
@@ -52,10 +55,16 @@ want=(libcamera libcamera-ipa libcamera-tools)
 for p in $(rpm -qa --qf '%{NAME}\n' | grep -E '^libcamera-(gstreamer|v4l2|qcam|devel)$|^python3-libcamera$'); do
   want+=("$p")
 done
+# exact file names of THIS build (the RPMS dir may hold older builds too)
+VR="$(rpmspec -q --srpm --qf '%{version}-%{release}\n' "$SPEC" | head -1)"
+ARCH="$(rpm -E %_arch)"
 rpms=()
 for p in "${want[@]}"; do
-  f=$(ls ~/rpmbuild/RPMS/x86_64/${p}-*.gb12cam.*.rpm 2>/dev/null) && rpms+=("$f")
+  f=~/rpmbuild/RPMS/$ARCH/$p-$VR.$ARCH.rpm
+  if [ -f "$f" ]; then rpms+=("$f"); else echo "WARNING: $f not built, skipped" >&2; fi
 done
+[ ${#rpms[@]} -gt 0 ] || { echo "ERROR: no built RPMs for $VR" >&2; exit 1; }
+printf '  %s\n' "${rpms[@]##*/}"
 sudo dnf install -y "${rpms[@]}"
 
 echo "== versionlock so updates can't drop the patch =="
