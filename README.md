@@ -141,6 +141,11 @@ Kernel patches, `dw9806b.c`, `imx241.c`/`imx241-regs.h`, and the libcamera
 [fxjosemi/Samsung-Galaxy-Book-12-Linux](https://github.com/fxjosemi/Samsung-Galaxy-Book-12-Linux).
 This repo adds the Fedora DKMS packaging and build scripts.
 
+## AI assistance
+
+Parts of this repository were developed with AI assistance (Claude by
+Anthropic). Every change was reviewed and tested on real SM-W720 hardware.
+
 ## License
 [GPL-2.0](LICENSE). The kernel sources and patches are derived from the Linux
 kernel and the upstream repo above and carry `SPDX-License-Identifier: GPL-2.0`.
